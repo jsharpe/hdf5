@@ -33,7 +33,7 @@ namespace hdf {
     }
 
     template<class T>
-    class dummy { };
+    class wrapper { };
 
     class create { };
 
@@ -74,7 +74,7 @@ namespace hdf {
 
     struct DataTypeCreator {
       template<class T>
-      DataTypeCreator(dummy<T>) {
+      DataTypeCreator(wrapper<T>) {
 	TypeCreatorHelper<T, typename data_type_traits<typename boost::remove_cv<T>::type>::is_homogeneous> t(type);
       }
 
@@ -95,7 +95,7 @@ namespace hdf {
       static hsize_t dimsize() { if(is_homogeneous::value) return boost::mpl::count<vec_type, typename boost::mpl::at_c<vec_type, 0>::type>::type::value; else return 1; }
 
     static void insert_data_type(hid_t t, size_t & offset) {
-      dummy<Type> dt;
+      wrapper<Type> dt;
       DataTypeCreator d(dt);
       static int i = 0;
       std::string name(typeid(Type).name());
@@ -252,13 +252,13 @@ namespace hdf {
   class HDF5DataType : boost::noncopyable {
   public:
     template<class Type>
-    HDF5DataType(dummy<Type> t) {
+    HDF5DataType(wrapper<Type> t) {
       createType(t);
     }
 
     template<class Type>
     HDF5DataType(Type) {
-      dummy<Type> t;
+      wrapper<Type> t;
       createType(t);
     }
 
@@ -280,7 +280,7 @@ namespace hdf {
     hid_t hid() const { return datatype; }
   private:
     template<class Type>
-    void createType(dummy<Type> t)
+    void createType(wrapper<Type> t)
     {
       DataTypeCreator type(t);
       datatype = type.type;
@@ -479,7 +479,7 @@ namespace hdf {
     static boost::shared_ptr<dataset_type>
     createDataSet(file_handle_type & f, const boost::filesystem::path & path, const std::vector<hsize_t> &dims, const std::vector<hsize_t> &maxdims) {
       detail::HDF5DataSpace space(dims, maxdims);
-      detail::HDF5DataType type(detail::dummy<Type>());
+      detail::HDF5DataType type(detail::wrapper<Type>());
       return boost::shared_ptr<dataset_type>(new dataset_type(f, path.string(), type, space));
     }
 
@@ -487,7 +487,7 @@ namespace hdf {
     static boost::shared_ptr<dataset_type>
     createDataSet(group_type & f, const boost::filesystem::path & path, const std::vector<hsize_t> &dims) {
       detail::HDF5DataSpace space(dims);
-      detail::dummy<Type> t;
+      detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
       return boost::shared_ptr<dataset_type>(new dataset_type(f, path.string(), datatype, space));
     }
@@ -495,7 +495,7 @@ namespace hdf {
     template<typename Type>
     static void
     write_attribute(const attribute_type & attribute, const Type & data) {
-      detail::dummy<Type> t;
+      detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
       H5Awrite(attribute.hid(), datatype.hid(), &data);
     }
@@ -505,7 +505,7 @@ namespace hdf {
     write_dataset(const dataset_type & dataset, const std::vector<Type> & data) {
       std::vector<hsize_t> d = getDims(data);
       detail::HDF5DataSpace memorySpace(d);
-      detail::dummy<Type> t;
+      detail::wrapper<Type> t;
       detail::HDF5DataType memdatatype(t);
       H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), H5S_ALL, H5P_DEFAULT, &data[0]);
     }
@@ -513,7 +513,7 @@ namespace hdf {
     template<typename Type>
     static void
     read_attribute(const attribute_type & attribute, Type & data) {
-      detail::dummy<Type> t;
+      detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
       H5Aread(attribute.hid(), datatype.hid(), &data);
     }
@@ -526,7 +526,7 @@ namespace hdf {
       data.resize(dims[0]*dims[1]);
       std::vector<hsize_t> d(1,data.size());
       detail::HDF5DataSpace memorySpace(d);
-      detail::dummy<Type> t;
+      detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
       H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(), fileSpace->hid(), H5P_DEFAULT, &data[0]);
     }
