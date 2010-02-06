@@ -78,6 +78,11 @@ namespace hdf {
 	TypeCreatorHelper<T, typename data_type_traits<typename boost::remove_cv<T>::type>::is_homogeneous> t(type);
       }
 
+      template<class T>
+      DataTypeCreator(wrapper<T *>) {
+	TypeCreatorHelper<T, typename data_type_traits<typename boost::remove_cv<T>::type>::is_homogeneous> t(type);
+      }
+
       hid_t type;
     };
 
@@ -380,9 +385,9 @@ namespace hdf {
 		const HDF5DataSpace &dataspace) {
       hid_t cparms;
       cparms = H5Pcreate(H5P_DATASET_CREATE);
-      //@todo: chunk the datset
-      hsize_t chunk_dims[2] = {2,2};
-      H5Pset_chunk(cparms, 2, chunk_dims);
+//       //@todo: chunk the datset
+//       hsize_t chunk_dims[2] = {2,2};
+//       H5Pset_chunk(cparms, 2, chunk_dims);
 #if H5_VERS_MINOR >= 8
       dataset = H5Dcreate(p.hid(), name.c_str(), datatype.hid(), dataspace.hid(), H5P_DEFAULT, cparms, H5P_DEFAULT);
 #else
@@ -606,6 +611,15 @@ namespace hdf {
       data.resize(dims[0]*dims[1]);
       std::vector<hsize_t> d(1,data.size());
       detail::HDF5DataSpace memorySpace(d);
+      detail::wrapper<Type> t;
+      detail::HDF5DataType datatype(t);
+      H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(), fileSpace->hid(), H5P_DEFAULT, &data[0]);
+    }
+
+    template<typename Type>
+    static void
+    read_dataset(const dataset_type & dataset, Type & data, const detail::HDF5DataSpace & memorySpace) {
+      boost::shared_ptr<detail::HDF5DataSpace> fileSpace = dataset.getDataSpace();
       detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
       H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(), fileSpace->hid(), H5P_DEFAULT, &data[0]);
