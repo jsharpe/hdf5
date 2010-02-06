@@ -20,6 +20,7 @@
 #include <boost/fusion/adapted/mpl.hpp>
 #include <boost/fusion/include/mpl.hpp>
 #include <boost/type_traits/is_same.hpp>
+#include <boost/filesystem/path.hpp>
 
 namespace hdf {
   namespace detail {
@@ -246,6 +247,18 @@ namespace hdf {
       assert(offset.size() == stride.size() && stride.size() == count.size());
       dataspace = H5Scopy(orig.hid());
       H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, &offset[0], &stride[0], &count[0], NULL);
+      check_errors();
+    }
+
+    HDF5DataSpace(const HDF5DataSpace & orig,
+		  const std::vector<hsize_t> & offset,
+		  const std::vector<hsize_t> & stride,
+		  const std::vector<hsize_t> & count,
+		  const std::vector<hsize_t> & block)
+    {
+      assert(offset.size() == stride.size() && stride.size() == count.size() && count.size() == block.size());
+      dataspace = H5Scopy(orig.hid());
+      H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, &offset[0], &stride[0], &count[0], &block[0]);
       check_errors();
     }
 
@@ -623,6 +636,15 @@ namespace hdf {
       detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
       H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(), fileSpace->hid(), H5P_DEFAULT, &data[0]);
+    }
+
+    template<typename Type>
+    static void
+    read_dataset(const dataset_type & dataset, Type & data) {
+      boost::shared_ptr<detail::HDF5DataSpace> fileSpace = dataset.getDataSpace();
+      detail::wrapper<Type> t;
+      detail::HDF5DataType datatype(t);
+      H5Dread(dataset.hid(), datatype.hid(), fileSpace->hid(), fileSpace->hid(), H5P_DEFAULT, data);
     }
 
     template<typename Type>

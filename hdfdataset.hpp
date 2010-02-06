@@ -41,6 +41,13 @@ namespace hdf {
       HDFImpl::read_dataset(*dataset, data, mem);
     }
 
+
+    template<typename Type>
+    void
+    readData(Type &data)
+    {
+      HDFImpl::read_dataset(*dataset, data);
+    }
     
     template<class Type>
     operator Type()

@@ -1,7 +1,7 @@
 #ifndef hdfslabH
 #define hdfslabH
 
-#include <hdf5/hdfgroup.hpp>
+#include <hdf5/hdf5/traits.hpp>
 #include <boost/filesystem/path.hpp>
 
 namespace hdf {
@@ -26,6 +26,14 @@ namespace hdf {
 	 const std::vector<hsize_t> & stride,
 	 const std::vector<hsize_t> & count)
       : HDFImpl::slab_type(orig, offset, stride, count)
+    {}
+
+    Slab(const Slab<order, HDFImpl> & orig,
+	 const std::vector<hsize_t> & offset,
+	 const std::vector<hsize_t> & stride,
+	 const std::vector<hsize_t> & count,
+	 const std::vector<hsize_t> & block)
+      : HDFImpl::slab_type(orig, offset, stride, count, block)
     {}
 
   };
