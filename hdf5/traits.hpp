@@ -211,9 +211,13 @@ namespace hdf {
     hid_t file;
   };
 
-  class HDF5DataSpace : boost::noncopyable {
+  class HDF5DataSpace {
   public:
     HDF5DataSpace(hid_t space) : dataspace(space) {}
+
+    HDF5DataSpace(const HDF5DataSpace & other) {
+      H5Scopy(other.hid());
+    }
 
     HDF5DataSpace(const std::vector<hsize_t> &dims) {
       dataspace = H5Screate_simple(dims.size(), &dims[0], NULL);
@@ -226,6 +230,17 @@ namespace hdf {
 	dataspace = H5Screate_simple(dims.size(), &dims[0], NULL);
       else
 	dataspace = H5Screate_simple(dims.size(), &dims[0], &maxdims[0]);
+      check_errors();
+    }
+
+    HDF5DataSpace(const HDF5DataSpace & orig,
+		  const std::vector<hsize_t> & offset,
+		  const std::vector<hsize_t> & stride,
+		  const std::vector<hsize_t> & count)
+    {
+      assert(offset.size() == stride.size() && stride.size() == count.size());
+      dataspace = H5Scopy(orig.hid());
+      H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, &offset[0], &stride[0], &count[0], NULL);
       check_errors();
     }
 
@@ -244,7 +259,63 @@ namespace hdf {
       return dims;
     }
 
+    void selectAll() {
+      H5Sselect_all(hid());
+    }
+
+    void selectNone() {
+      H5Sselect_none(hid());
+    }
+
     hid_t hid() const { return dataspace; }
+
+  public:
+    /**
+     * Logically and the two slabs together
+     */
+    HDF5DataSpace & operator and(const HDF5DataSpace & other)
+    { 
+      checkExtentsMatch(other);
+      return *this;
+    }
+
+    /**
+     * Logically xor the two slabs together
+     */
+    HDF5DataSpace & operator xor(const HDF5DataSpace & other)
+    {
+      
+      return *this;
+    }
+
+    /**
+     * Logically or the two slabs together
+     */
+    HDF5DataSpace & operator or(const HDF5DataSpace & other)
+    {
+      
+      return *this;
+    }
+
+    /**
+     * Logical not
+     */
+    HDF5DataSpace & operator not()
+    {
+      
+      return *this;
+    }
+
+  private:
+    void checkExtentsMatch(const HDF5DataSpace & other) const
+    {
+#if H5_VERS_MINOR >= 8
+      htri_t r = H5Sextent_equal(hid(), other.hid());
+      if(r == 0) throw; //Extents don't match
+      if(r < 1)
+	throw; //Error
+#endif
+    }
   private:
     hid_t dataspace;
   };
@@ -310,8 +381,8 @@ namespace hdf {
       hid_t cparms;
       cparms = H5Pcreate(H5P_DATASET_CREATE);
       //@todo: chunk the datset
-      //	  hsize_t chunk_dims[2] = {2,2};
-      //	  H5Pset_chunk(cparms, 2, chunk_dims);
+      hsize_t chunk_dims[2] = {2,2};
+      H5Pset_chunk(cparms, 2, chunk_dims);
 #if H5_VERS_MINOR >= 8
       dataset = H5Dcreate(p.hid(), name.c_str(), datatype.hid(), dataspace.hid(), H5P_DEFAULT, cparms, H5P_DEFAULT);
 #else
@@ -413,6 +484,7 @@ namespace hdf {
     typedef detail::HDF5DataType datatype_type;
     typedef detail::HDF5DataSet dataset_type;
     typedef detail::HDF5Attribute attribute_type;
+    typedef detail::HDF5DataSpace slab_type;
 
     static boost::shared_ptr<file_handle_type>
     open(const boost::filesystem::path & path, bool truncate) {
@@ -477,16 +549,14 @@ namespace hdf {
 
     template<class Type>
     static boost::shared_ptr<dataset_type>
-    createDataSet(file_handle_type & f, const boost::filesystem::path & path, const std::vector<hsize_t> &dims, const std::vector<hsize_t> &maxdims) {
-      detail::HDF5DataSpace space(dims, maxdims);
+    createDataSet(file_handle_type & f, const boost::filesystem::path & path, const detail::HDF5DataSpace & space) {
       detail::HDF5DataType type(detail::wrapper<Type>());
       return boost::shared_ptr<dataset_type>(new dataset_type(f, path.string(), type, space));
     }
 
     template<typename Type>
     static boost::shared_ptr<dataset_type>
-    createDataSet(group_type & f, const boost::filesystem::path & path, const std::vector<hsize_t> &dims) {
-      detail::HDF5DataSpace space(dims);
+    createDataSet(group_type & f, const boost::filesystem::path & path, const detail::HDF5DataSpace &space) {
       detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
       return boost::shared_ptr<dataset_type>(new dataset_type(f, path.string(), datatype, space));
@@ -508,6 +578,16 @@ namespace hdf {
       detail::wrapper<Type> t;
       detail::HDF5DataType memdatatype(t);
       H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), H5S_ALL, H5P_DEFAULT, &data[0]);
+    }
+
+    template<typename Type>
+    static void
+    write_dataset(const dataset_type & dataset, const Type * data, const detail::HDF5DataSpace &memorySpace) {
+      detail::wrapper<Type> t;
+      detail::HDF5DataType memdatatype(t);
+      hid_t fileSpace = H5Dget_space(dataset.hid());
+      H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), fileSpace, H5P_DEFAULT, data);
+      H5Sclose(fileSpace);
     }
 
     template<typename Type>

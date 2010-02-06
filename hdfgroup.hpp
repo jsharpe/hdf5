@@ -4,6 +4,7 @@
 #include <hdf5/hdf5/traits.hpp>
 #include <hdf5/hdfdataset.hpp>
 #include <hdf5/hdfattribute.hpp>
+#include <hdf5/slab.hpp>
 #include <boost/shared_ptr.hpp>
 
 namespace hdf {
@@ -47,10 +48,10 @@ namespace hdf {
     
     template<typename Type>
     boost::shared_ptr<HDFAttribute<HDFImpl> >
-    createAttribute(const std::string &name, std::vector<hsize_t> dims, std::vector<hsize_t> maxdims) {
+    createAttribute(const std::string &name, std::vector<hsize_t> dims) {
       return boost::shared_ptr<HDFAttribute<HDFImpl> >
 	(new HDFAttribute<HDFImpl>
-	 (HDFImpl::template createAttribute<Type>(*group, name, dims, maxdims)));
+	 (HDFImpl::template createAttribute<Type>(*group, name, dims, dims)));
     }
     
     boost::shared_ptr<HDFAttribute<HDFImpl> >
@@ -60,9 +61,9 @@ namespace hdf {
 	 (HDFImpl::openAttribute(*group, name)));
     }
     
-    template<typename Type>
+    template<int order, typename Type>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
-    createDataset(const boost::filesystem::path & path, std::vector<hsize_t> dims, std::vector<hsize_t> maxdims) {
+    createDataset(const boost::filesystem::path & path, const Slab<order, HDFImpl> &dims) {
       return boost::shared_ptr<HDFDataSet<HDFImpl> >
 	(new HDFDataSet<HDFImpl>
 	 (HDFImpl::template createDataSet<Type>(*group, path, dims)));
@@ -71,11 +72,20 @@ namespace hdf {
     template<typename Type>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
     writeDataset(const boost::filesystem::path & path, const std::vector<Type> & data) {
-      std::vector<hsize_t> dims = HDFImpl::getDims(data);
-      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset = createDataset<Type>(path, dims, dims);
+      Slab<1,HDFImpl> dims(1,data.size());
+      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset = createDataset<1,Type>(path, dims);
       dataset->writeData(data);
       return dataset;
     }
+
+    template<int order, typename Type>
+    boost::shared_ptr<HDFDataSet<HDFImpl> >
+    writeDataset(const boost::filesystem::path & path, const Type* data, const Slab<order, HDFImpl> &memslab, const Slab<order, HDFImpl> &fileslab) {
+      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset = createDataset<order, Type>(path, fileslab);
+      dataset->writeData(data, memslab);
+      return dataset;
+    }
+
   private:
     boost::shared_ptr<typename HDFImpl::group_type> group;
   };

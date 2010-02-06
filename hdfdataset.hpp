@@ -1,6 +1,7 @@
 #ifndef hdfdatasetH
 #define hdfdatasetH
 
+#include <hdf5/slab.hpp>
 #include <hdf5/hdf5/traits.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -17,6 +18,13 @@ namespace hdf {
     writeData(const Type &data)
     {
       HDFImpl::write_dataset(*dataset, data);
+    }
+
+    template<int order, typename Type>
+    void
+    writeData(const Type &data, const Slab<order, HDFImpl> & mem)
+    {
+      HDFImpl::write_dataset(*dataset, data, mem);
     }
     
     template<typename Type>
