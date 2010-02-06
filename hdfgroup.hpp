@@ -6,6 +6,7 @@
 #include <hdf5/hdfattribute.hpp>
 #include <hdf5/slab.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/filesystem/path.hpp>
 
 namespace hdf {
   template<typename>
@@ -61,7 +62,7 @@ namespace hdf {
 	 (HDFImpl::openAttribute(*group, name)));
     }
     
-    template<int order, typename Type>
+    template<typename Type, int order>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
     createDataset(const boost::filesystem::path & path, const Slab<order, HDFImpl> &dims) {
       return boost::shared_ptr<HDFDataSet<HDFImpl> >
