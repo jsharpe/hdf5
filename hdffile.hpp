@@ -1,3 +1,6 @@
+#ifndef hdffileH
+#define hdffileH
+
 #include <boost/filesystem/path.hpp>
 #include <hdf5/hdfgroup.hpp>
 #include <hdf5/hdf5/traits.hpp>
@@ -22,3 +25,6 @@ namespace hdf {
     boost::shared_ptr<typename HDFImpl::file_handle_type> file;
   };
 }
+
+#endif
+
