@@ -82,7 +82,7 @@ namespace hdf {
     template<int order, typename Type>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
     writeDataset(const boost::filesystem::path & path, const Type* data, const Slab<order, HDFImpl> &memslab, const Slab<order, HDFImpl> &fileslab) {
-      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset = createDataset<order, Type>(path, fileslab);
+      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset = createDataset<Type>(path, fileslab);
       dataset->writeData(data, memslab);
       return dataset;
     }
