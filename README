@@ -1,0 +1,24 @@
+This library aims to provide an abstraction of the hdf5 file format for c++ 
+code. It aims to reduce the number of explicit calls to the hdf5 APIs by 
+using the c++ type system to automatically construct the appropriate datatypes.
+
+The library is a header only library so no compilation is required.
+
+Requirements:
+hdf5 1.6 or greater
+mpi-io if parallel io support is required
+Boost 1.37 or greater
+
+Example usage:
+
+#include <hdf5/hdffile.hpp>
+#include <hdf5/hdfdataset.hpp>
+#include <boost/shared_ptr.hpp>
+
+int main()
+{
+	hdf::HDFFile<> file("test.h5", hdf::HDFFile<>::truncate);
+	std::vector<double> data(100,1.0);
+	boost::shared_ptr<hdf::HDFDataSet<> > dataset
+	  = file.writeDataset<double>("doubledataset", data);
+}
