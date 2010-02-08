@@ -14,12 +14,14 @@ namespace hdf {
       truncate = 1
     };
 
+    /**
+     * Open the hdf5 file at the given location
+     * Truncates the file if flags == truncate
+     */
     HDFFile(const boost::filesystem::path & path, Flags flags = none) {
       file = HDFImpl::open(path, flags==truncate);
       initFileGroup(*file);
     };
-    
-    ~HDFFile() {}
     
   private:
     boost::shared_ptr<typename HDFImpl::file_handle_type> file;
