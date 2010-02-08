@@ -36,7 +36,7 @@ namespace hdf {
     template<class T>
     class wrapper { };
 
-    class create { };
+    class Create { };
 
     template<typename>
     class data_type_traits;
@@ -200,7 +200,7 @@ namespace hdf {
       check_errors();
     }
 
-    HDF5FileHolder(const boost::filesystem::path & path, create) {
+    HDF5FileHolder(const boost::filesystem::path & path, Create) {
       file = H5Fcreate(path.string().c_str(),
 		       H5F_ACC_TRUNC,
 		       H5P_DEFAULT,
@@ -430,7 +430,7 @@ namespace hdf {
   class HDF5Group {
   public:
     template<class Parent>
-    HDF5Group(Parent & p, const boost::filesystem::path & path, create) {
+    HDF5Group(Parent & p, const boost::filesystem::path & path, Create) {
 #if H5_VERS_MINOR >= 8
       group = H5Gcreate(p.hid(), path.string().c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
 #else
@@ -440,18 +440,31 @@ namespace hdf {
     }
 
     template<class Parent>
-    HDF5Group(Parent & p, const boost::filesystem::path & path) {
+    HDF5Group(Parent & p, const boost::filesystem::path & path, bool create) {
 #if H5_VERS_MINOR >= 8
       group = H5Gopen(p.hid(), path.string().c_str(), H5P_DEFAULT);
 #else
       group = H5Gopen(p.hid(), path.string().c_str());
 #endif
-      check_errors();
+
+      if(create && group < 0) {
+	//Group didn't exist and we've asked to create the group
+#if H5_VERS_MINOR >= 8
+	group = H5Gcreate(p.hid(), path.string().c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
+#else
+	group = H5Gcreate(p.hid(), path.string().c_str(), 0);
+#endif
+	if(group < 0)
+	  throw; //Error creating group
+      }
     }
 
     ~HDF5Group()
     {
-      H5Gclose(group);
+      //Only close if a valid group id
+      //Should always be true but just in case...
+      if(group > 0)
+	H5Gclose(group);
       check_errors();
     }
 
@@ -466,6 +479,8 @@ namespace hdf {
     template<class Object>
     HDF5Attribute(Object & p, const std::string &name) {
       attribute = H5Aopen_name(p.hid(), name.c_str());
+      if(attribute < 0)
+	throw;
       check_errors();
     }
 
@@ -507,30 +522,30 @@ namespace hdf {
     static boost::shared_ptr<file_handle_type>
     open(const boost::filesystem::path & path, bool truncate) {
       if(truncate) {
-	detail::create c;
+	detail::Create c;
 	return boost::shared_ptr<file_handle_type>(new file_handle_type(path, c));
       }
       return boost::shared_ptr<file_handle_type>(new file_handle_type(path));
     }
 
     static boost::shared_ptr<group_type>
-    openGroup(file_handle_type & f, const boost::filesystem::path & path) {
-      return boost::shared_ptr<group_type>(new group_type(f,path));
+    openGroup(file_handle_type & f, const boost::filesystem::path & path, bool create) {
+      return boost::shared_ptr<group_type>(new group_type(f,path,create));
     }
 
     static boost::shared_ptr<group_type>
-    openGroup(group_type & f, const boost::filesystem::path & path) {
-      return boost::shared_ptr<group_type>(new group_type(f,path));
+    openGroup(group_type & f, const boost::filesystem::path & path, bool create) {
+      return boost::shared_ptr<group_type>(new group_type(f,path,create));
     }
 
     static boost::shared_ptr<group_type>
     createGroup(file_handle_type & f, const boost::filesystem::path & path) {
-      return boost::shared_ptr<group_type>(new group_type(f,path,detail::create()));
+      return boost::shared_ptr<group_type>(new group_type(f,path,detail::Create()));
     }
 
     static boost::shared_ptr<group_type>
     createGroup(group_type & f, const boost::filesystem::path & path) {
-      return boost::shared_ptr<group_type>(new group_type(f,path,detail::create()));
+      return boost::shared_ptr<group_type>(new group_type(f,path,detail::Create()));
     }
 
     static boost::shared_ptr<dataset_type>

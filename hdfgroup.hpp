@@ -19,25 +19,18 @@ namespace hdf {
   protected:
     HDFGroup() {};
     void initFileGroup(typename HDFImpl::file_handle_type &file, const boost::filesystem::path & path = boost::filesystem::path("/")) {
-      group = HDFImpl::openGroup(file, path);
+      group = HDFImpl::openGroup(file, path, true); //pass true to create here for the case where we are mounting a file in a file where the mount point doesn't yet exist
     }
   public:
     HDFGroup(HDFFile<HDFImpl> & file, const boost::filesystem::path &path) {
       group = HDFImpl::openGroup(file, path);
     }
-    
-    boost::shared_ptr<HDFDataSet<HDFImpl> >
-    openDataset(const boost::filesystem::path & path) {
-      return boost::shared_ptr<HDFDataSet<HDFImpl> >
-	(new HDFDataSet<HDFImpl>
-	 (HDFImpl::openDataSet(*group, path)));
-    }
-    
+        
     boost::shared_ptr<HDFGroup<HDFImpl> >
-    openGroup(const boost::filesystem::path & path) {
+    openGroup(const boost::filesystem::path & path, bool create=false) {
       return boost::shared_ptr<HDFGroup<HDFImpl> >
 	(new HDFGroup<HDFImpl>
-	 (HDFImpl::openGroup(*group, path)));
+	 (HDFImpl::openGroup(*group, path, create)));
     }
     
     boost::shared_ptr<HDFGroup<HDFImpl> >
@@ -62,6 +55,13 @@ namespace hdf {
 	 (HDFImpl::openAttribute(*group, name)));
     }
     
+    boost::shared_ptr<HDFDataSet<HDFImpl> >
+    openDataset(const boost::filesystem::path & path) {
+      return boost::shared_ptr<HDFDataSet<HDFImpl> >
+	(new HDFDataSet<HDFImpl>
+	 (HDFImpl::openDataSet(*group, path)));
+    }
+
     template<typename Type, int order>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
     createDataset(const boost::filesystem::path & path, const Slab<order, HDFImpl> &dims) {
