@@ -25,6 +25,7 @@
 namespace hdf {
   namespace detail {
 
+    inline
     void check_errors() {
 #if H5_VERS_MINOR >= 8
       H5Eprint(H5E_DEFAULT, NULL);
