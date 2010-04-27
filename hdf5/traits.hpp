@@ -383,7 +383,7 @@ namespace hdf {
     /**
      * Logically and the two slabs together
      */
-    HDF5DataSpace & operator and(const HDF5DataSpace & other)
+    HDF5DataSpace & operator &(const HDF5DataSpace & other)
     { 
       checkExtentsMatch(other);
       return *this;
@@ -392,7 +392,7 @@ namespace hdf {
     /**
      * Logically xor the two slabs together
      */
-    HDF5DataSpace & operator xor(const HDF5DataSpace & other)
+    HDF5DataSpace & operator ^(const HDF5DataSpace & other)
     {
       
       return *this;
@@ -401,7 +401,7 @@ namespace hdf {
     /**
      * Logically or the two slabs together
      */
-    HDF5DataSpace & operator or(const HDF5DataSpace & other)
+    HDF5DataSpace & operator |(const HDF5DataSpace & other)
     {
       
       return *this;
@@ -410,7 +410,7 @@ namespace hdf {
     /**
      * Logical not
      */
-    HDF5DataSpace & operator not()
+    HDF5DataSpace & operator !()
     {
       
       return *this;
