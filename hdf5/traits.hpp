@@ -310,10 +310,11 @@ namespace hdf {
 
   class HDF5DataSpace {
   public:
-    HDF5DataSpace(hid_t space) : dataspace(space) {}
+    HDF5DataSpace(hid_t space) : dataspace(space) { assert(H5Iget_type(space) == H5I_DATASPACE); }
 
     HDF5DataSpace(const HDF5DataSpace & other) {
-      H5Scopy(other.hid());
+      dataspace = H5Scopy(other.hid());
+      check_errors();
     }
 
     HDF5DataSpace(const std::vector<hsize_t> &dims) {
