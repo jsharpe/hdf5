@@ -134,6 +134,24 @@ namespace hdf {
   };
 
   template<>
+  class data_type_traits<char> {
+  public:
+    typedef boost::true_type is_homogeneous;
+    static hid_t homogeneous_type() { return H5Tcopy(value()); }
+    static hid_t value() { return H5T_NATIVE_CHAR; }
+    static hsize_t dimsize() { return 1; }
+    static void insert_data_type(hid_t t, size_t & offset) {
+      static int i = 0;
+      std::string name("char");
+      std::stringstream ss;
+      ss << i++;
+      name += ss.str();
+      H5Tinsert(t, name.c_str(), offset, value());
+      offset += HDF5_datatype_size<char>();
+    }
+  };
+
+  template<>
   class data_type_traits<unsigned int> {
   public:
     typedef boost::true_type is_homogeneous;
@@ -148,6 +166,78 @@ namespace hdf {
       name += ss.str();
       H5Tinsert(t, name.c_str(), offset, value());
       offset += HDF5_datatype_size<unsigned int>();
+    }
+  };
+
+  template<>
+  class data_type_traits<long> {
+  public:
+    typedef boost::true_type is_homogeneous;
+    static hid_t homogeneous_type() { return H5Tcopy(value()); }
+    static hid_t value() { return H5T_NATIVE_LONG; }
+    static hsize_t dimsize() { return 1; }
+    static void insert_data_type(hid_t t, size_t & offset) {
+      static int i = 0;
+      std::string name("uint");
+      std::stringstream ss;
+      ss << i++;
+      name += ss.str();
+      H5Tinsert(t, name.c_str(), offset, value());
+      offset += HDF5_datatype_size<long>();
+    }
+  };
+
+  template<>
+  class data_type_traits<unsigned long> {
+  public:
+    typedef boost::true_type is_homogeneous;
+    static hid_t homogeneous_type() { return H5Tcopy(value()); }
+    static hid_t value() { return H5T_NATIVE_ULONG; }
+    static hsize_t dimsize() { return 1; }
+    static void insert_data_type(hid_t t, size_t & offset) {
+      static int i = 0;
+      std::string name("uint");
+      std::stringstream ss;
+      ss << i++;
+      name += ss.str();
+      H5Tinsert(t, name.c_str(), offset, value());
+      offset += HDF5_datatype_size<unsigned long>();
+    }
+  };
+
+  template<>
+  class data_type_traits<boost::uint16_t> {
+  public:
+    typedef boost::true_type is_homogeneous;
+    static hid_t homogeneous_type() { return H5Tcopy(value()); }
+    static hid_t value() { return H5T_NATIVE_UINT16; }
+    static hsize_t dimsize() { return 1; }
+    static void insert_data_type(hid_t t, size_t & offset) {
+      static int i = 0;
+      std::string name("uint16");
+      std::stringstream ss;
+      ss << i++;
+      name += ss.str();
+      H5Tinsert(t, name.c_str(), offset, value());
+      offset += HDF5_datatype_size<boost::uint16_t>();
+    }
+  };
+
+  template<>
+  class data_type_traits<boost::int16_t> {
+  public:
+    typedef boost::true_type is_homogeneous;
+    static hid_t homogeneous_type() { return H5Tcopy(value()); }
+    static hid_t value() { return H5T_NATIVE_INT16; }
+    static hsize_t dimsize() { return 1; }
+    static void insert_data_type(hid_t t, size_t & offset) {
+      static int i = 0;
+      std::string name("int16");
+      std::stringstream ss;
+      ss << i++;
+      name += ss.str();
+      H5Tinsert(t, name.c_str(), offset, value());
+      offset += HDF5_datatype_size<boost::int16_t>();
     }
   };
 
