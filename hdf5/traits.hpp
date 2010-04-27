@@ -5,6 +5,7 @@
 #include <boost/noncopyable.hpp>
 #include <vector>
 #include <typeinfo>
+#include <iostream>
 #include <sstream>
 
 #include <boost/fusion/support/is_sequence.hpp>
@@ -22,7 +23,32 @@
 #include <boost/type_traits/is_same.hpp>
 #include <boost/filesystem/path.hpp>
 
+#include <boost/cstdint.hpp>
+#include <exception>
+
+#include <mpi.h>
+
 namespace hdf {
+
+  class DatasetExists : public std::exception { };
+  class AttributeExists : public std::exception { };
+  class GroupNotFound: public std::exception { };
+  class DatasetNotFound: public std::exception { };
+  class AttributeNotFound : public std::exception { };
+
+  inline
+  void output_dims(hid_t dataspace) {
+    if(H5Sis_simple(dataspace)) {
+      std::cout << "Num dims: " << H5Sget_simple_extent_ndims(dataspace) << "\n";
+      std::vector<hsize_t> dims(H5Sget_simple_extent_ndims(dataspace));
+      H5Sget_simple_extent_dims(dataspace, &dims[0], 0);
+      for(std::size_t i=0; i < dims.size(); ++i)
+	std::cout << "[" << i << "] " << dims[i] << "\n";
+
+      std::cout << "Selected " << H5Sget_select_elem_npoints(dataspace) << " points\n";
+    }
+  }
+
   namespace detail {
 
     inline
@@ -280,22 +306,38 @@ namespace hdf {
   class HDF5FileHolder : boost::noncopyable {
   public:
     HDF5FileHolder(const boost::filesystem::path & path) {
+      hid_t	plist_id;
+      plist_id = H5Pcreate(H5P_FILE_ACCESS);
+#ifdef H5_HAVE_PARALLEL
+      H5Pset_fapl_mpiposix(plist_id, MPI_COMM_WORLD, false);
+#endif
+
       if(H5Fis_hdf5(path.string().c_str()) > 0) {
-	file = H5Fopen(path.string().c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
+	file = H5Fopen(path.string().c_str(), H5F_ACC_RDWR, plist_id);
       } else {
 	file = H5Fcreate(path.string().c_str(),
 			 H5F_ACC_TRUNC,
 			 H5P_DEFAULT,
-			 H5P_DEFAULT);
+			 plist_id);
       }
+      H5Pclose(plist_id);
       check_errors();
     }
 
     HDF5FileHolder(const boost::filesystem::path & path, Create) {
+      hid_t	plist_id;
+      plist_id = H5Pcreate(H5P_FILE_ACCESS);
+#ifdef H5_HAVE_PARALLEL
+      H5Pset_fapl_mpiposix(plist_id, MPI_COMM_WORLD, false);
+#endif
+
       file = H5Fcreate(path.string().c_str(),
 		       H5F_ACC_TRUNC,
 		       H5P_DEFAULT,
-		       H5P_DEFAULT);
+		       plist_id);
+
+      H5Pclose(plist_id);
+
       check_errors();
     }
 
@@ -379,6 +421,37 @@ namespace hdf {
 
     hid_t hid() const { return dataspace; }
 
+    static boost::shared_ptr<HDF5DataSpace> 
+    selectSubset(const HDF5DataSpace & orig, const std::vector<int> &mapping)
+    {
+      boost::shared_ptr<HDF5DataSpace> newSpace(new HDF5DataSpace(orig));
+
+      hsize_t dataspaceDims = newSpace->getNumDimensions();
+
+      std::size_t numCoords = mapping.size()*dataspaceDims;
+      std::vector<hsize_t> dims = newSpace->getDimensions();
+      hsize_t dim2size = 1;
+      if(dataspaceDims > 1) {
+	numCoords *= dims[1];
+	dim2size = dims[1];
+      }
+      std::size_t numElements = numCoords/dataspaceDims;
+
+      std::vector<hsize_t> elements(numCoords);
+      std::vector<hsize_t>::iterator j = elements.begin();
+      for(std::vector<int>::const_iterator i = mapping.begin(); i != mapping.end(); ++i) {
+	for(int l=0; l < dim2size; ++l) {
+	  *j = *i;
+	  ++j;
+	  for(int k=1; k < dataspaceDims; ++k, ++j)
+	    *j = l;
+	}
+      }
+
+      H5Sselect_elements(newSpace->hid(), H5S_SELECT_SET, numElements, &elements[0]);
+
+      return newSpace;
+    }
   public:
     /**
      * Logically and the two slabs together
@@ -475,11 +548,17 @@ namespace hdf {
   public:
     template<class Parent>
     HDF5DataSet(Parent & p, const std::string &name) {
+      if(H5Lexists(p.hid(), name.c_str(), H5P_DEFAULT) != true) {
+	throw DatasetNotFound();
+      }
+
 #if H5_VERS_MINOR >= 8
       dataset = H5Dopen(p.hid(), name.c_str(), H5P_DEFAULT);
 #else
       dataset = H5Dopen(p.hid(), name.c_str());
 #endif
+      space.reset(new HDF5DataSpace(H5Dget_space(dataset)));
+
       check_errors();
     }
 
@@ -489,6 +568,10 @@ namespace hdf {
 		const HDF5DataType &datatype,
 		const HDF5DataSpace &dataspace) {
       hid_t cparms;
+      if(H5Lexists(p.hid(), name.c_str(), H5P_DEFAULT) == true) {
+	throw DatasetExists();
+      }
+
       cparms = H5Pcreate(H5P_DATASET_CREATE);
 //       //@todo: chunk the datset
 //       hsize_t chunk_dims[2] = {2,2};
@@ -499,6 +582,9 @@ namespace hdf {
       dataset = H5Dcreate(p.hid(), name.c_str(), datatype.hid(), dataspace.hid(), cparms);
 #endif
       H5Pclose(cparms);
+
+      space.reset(new HDF5DataSpace(H5Dget_space(dataset)));
+
       check_errors();
     }
 
@@ -508,18 +594,31 @@ namespace hdf {
     }
 
     boost::shared_ptr<HDF5DataSpace> getDataSpace() const {
-      boost::shared_ptr<HDF5DataSpace> space(new HDF5DataSpace(H5Dget_space(dataset)));
       return space;
+    }
+
+    boost::shared_ptr<HDF5DataSet>
+    selectSubset(const std::vector<int> & mapping)
+    {
+      boost::shared_ptr<HDF5DataSet> newDataset(new HDF5DataSet(dataset));
+      newDataset->space = HDF5DataSpace::selectSubset(*space, mapping);
+      return newDataset;
     }
 
     ///@todo: getAttribute(const char * name)
 
     hid_t hid() const { return dataset; }
   private:
+    HDF5DataSet(hid_t d) : dataset(d) {
+      assert(H5Iget_type(dataset)==H5I_DATASET);
+      H5Iinc_ref(dataset);
+    }
+  private:
     hid_t dataset;
+    boost::shared_ptr<HDF5DataSpace> space;
   };
 
-  class HDF5Group {
+  class HDF5Group : boost::noncopyable {
   public:
     template<class Parent>
     HDF5Group(Parent & p, const boost::filesystem::path & path, Create) {
@@ -528,18 +627,22 @@ namespace hdf {
 #else
       group = H5Gcreate(p.hid(), path.string().c_str(), 0);
 #endif
+      if(group < 0)
+	throw;
       check_errors();
     }
 
     template<class Parent>
     HDF5Group(Parent & p, const boost::filesystem::path & path, bool create) {
-#if H5_VERS_MINOR >= 8
-      group = H5Gopen(p.hid(), path.string().c_str(), H5P_DEFAULT);
-#else
-      group = H5Gopen(p.hid(), path.string().c_str());
-#endif
+      if(H5Lexists(p.hid(), path.string().c_str(), H5P_DEFAULT) || path.string() == "/") {
 
-      if(create && group < 0) {
+#if H5_VERS_MINOR >= 8
+	group = H5Gopen(p.hid(), path.string().c_str(), H5P_DEFAULT);
+#else
+	group = H5Gopen(p.hid(), path.string().c_str());
+#endif
+      }
+      else if(create) {
 	//Group didn't exist and we've asked to create the group
 #if H5_VERS_MINOR >= 8
 	group = H5Gcreate(p.hid(), path.string().c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
@@ -548,15 +651,14 @@ namespace hdf {
 #endif
 	if(group < 0)
 	  throw; //Error creating group
+      } else {
+	throw GroupNotFound();
       }
     }
 
     ~HDF5Group()
     {
-      //Only close if a valid group id
-      //Should always be true but just in case...
-      if(group > 0)
-	H5Gclose(group);
+      H5Gclose(group);
       check_errors();
     }
 
@@ -565,19 +667,25 @@ namespace hdf {
     hid_t group;
   };
 
-  class HDF5Attribute {
+  class HDF5Attribute : boost::noncopyable {
   public:
 
     template<class Object>
     HDF5Attribute(Object & p, const std::string &name) {
+      if(H5Aexists(p.hid(), name.c_str()) != true) {
+	throw AttributeNotFound();
+      }
+
       attribute = H5Aopen_name(p.hid(), name.c_str());
-      if(attribute < 0)
-	throw;
       check_errors();
     }
 
     template<class Type, class Object>
     HDF5Attribute(Object & p, const std::string &name, const std::vector<hsize_t>& dims, const std::vector<hsize_t> &maxdims, Type t) {
+      if(H5Aexists(p.hid(), name.c_str()) == true) {
+	throw AttributeExists();
+      }
+
       HDF5DataSpace space(dims, maxdims);
       HDF5DataType type(t);
 
@@ -697,6 +805,14 @@ namespace hdf {
 
     template<typename Type>
     static void
+    write_attribute(const attribute_type & attribute, const std::vector<Type> & data) {
+      detail::wrapper<Type> t;
+      detail::HDF5DataType memdatatype(t);
+      H5Awrite(attribute.hid(), memdatatype.hid(), &data);
+    }
+
+    template<typename Type>
+    static void
     write_dataset(const dataset_type & dataset, const std::vector<Type> & data) {
       std::vector<hsize_t> d = getDims(data);
       detail::HDF5DataSpace memorySpace(d);
@@ -727,8 +843,14 @@ namespace hdf {
     static void
     read_dataset(const dataset_type & dataset, std::vector<Type> & data) {
       boost::shared_ptr<detail::HDF5DataSpace> fileSpace = dataset.getDataSpace();
-      std::vector<hsize_t> dims = fileSpace->getDimensions();
-      data.resize(dims[0]*dims[1]);
+      if(data.empty()) {
+	std::vector<hsize_t> dims = fileSpace->getDimensions();
+	std::size_t size = dims[0];
+	for(int i=1; i < dims.size(); ++i)
+	  size *= dims[i];
+	
+	data.resize(size);
+      }
       std::vector<hsize_t> d(1,data.size());
       detail::HDF5DataSpace memorySpace(d);
       detail::wrapper<Type> t;
@@ -742,6 +864,9 @@ namespace hdf {
       boost::shared_ptr<detail::HDF5DataSpace> fileSpace = dataset.getDataSpace();
       detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
+
+//       output_dims(memorySpace.hid());
+//       output_dims(fileSpace->hid());
       H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(), fileSpace->hid(), H5P_DEFAULT, &data[0]);
     }
 
@@ -752,6 +877,12 @@ namespace hdf {
       detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
       H5Dread(dataset.hid(), datatype.hid(), fileSpace->hid(), fileSpace->hid(), H5P_DEFAULT, data);
+    }
+
+    template<typename HID>
+    static void
+    deleteDataset(HID & h, const std::string & path) {
+      H5Ldelete(h.hid(), path.c_str(), H5P_DEFAULT);
     }
 
     template<typename Type>

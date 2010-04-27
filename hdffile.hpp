@@ -22,7 +22,11 @@ namespace hdf {
       file = HDFImpl::open(path, flags==truncate);
       initFileGroup(*file);
     };
-    
+
+    ~HDFFile() {
+      HDFGroup<HDFImpl>::group.reset();
+    }
+
   private:
     boost::shared_ptr<typename HDFImpl::file_handle_type> file;
   };

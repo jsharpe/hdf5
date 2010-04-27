@@ -28,7 +28,7 @@ namespace hdf {
      * within another file
      */
     void initFileGroup(typename HDFImpl::file_handle_type &file, const boost::filesystem::path & path = boost::filesystem::path("/")) {
-      group = HDFImpl::openGroup(file, path, true); //pass true to create here for the case where we are mounting a file in a file where the mount point doesn't yet exist
+      group = HDFImpl::openGroup(file, path, false); //pass true to create here for the case where we are mounting a file in a file where the mount point doesn't yet exist - but only if path != "/"
     }
 
   public:
@@ -98,9 +98,31 @@ namespace hdf {
     template<typename Type, int order>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
     createDataset(const boost::filesystem::path & path, const Slab<order, HDFImpl> &dims) {
-      return boost::shared_ptr<HDFDataSet<HDFImpl> >
-	(new HDFDataSet<HDFImpl>
-	 (HDFImpl::template createDataSet<Type>(*group, path, dims)));
+      try {
+	return boost::shared_ptr<HDFDataSet<HDFImpl> >
+	  (new HDFDataSet<HDFImpl>
+	   (HDFImpl::template createDataSet<Type>(*group, path, dims)));
+      } catch (DatasetExists &) {
+	HDFImpl::deleteDataset(*group, path.string());
+	return boost::shared_ptr<HDFDataSet<HDFImpl> >
+	  (new HDFDataSet<HDFImpl>
+	   (HDFImpl::template createDataSet<Type>(*group, path, dims)));
+      }
+    }
+
+    template<typename Type>
+    boost::shared_ptr<HDFAttribute<HDFImpl> >
+    writeAttribute(const boost::filesystem::path & path, const Type & data) {
+      std::vector<hsize_t> dims(1,1);
+      boost::shared_ptr<HDFAttribute<HDFImpl> > attr;
+      try {
+	attr = createAttribute<Type>(path.string(), dims);
+      } catch (AttributeExists &) {
+	attr = openAttribute(path.string());
+      }
+
+      attr->writeData(data);
+      return attr;
     }
     
     /**
@@ -111,8 +133,14 @@ namespace hdf {
     template<typename Type>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
     writeDataset(const boost::filesystem::path & path, const std::vector<Type> & data) {
-      Slab<1,HDFImpl> dims(1,data.size());
-      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset = createDataset<1,Type>(path, dims);
+      std::vector<hsize_t> dims(1,data.size());
+      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset;
+      try {
+	dataset = createDataset<Type,1>(path, dims);
+      } catch (DatasetExists &) {
+	dataset = openDataset(path);
+      }
+
       dataset->writeData(data);
       return dataset;
     }
@@ -126,12 +154,17 @@ namespace hdf {
     template<int order, typename Type>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
     writeDataset(const boost::filesystem::path & path, const Type* data, const Slab<order, HDFImpl> &memslab, const Slab<order, HDFImpl> &fileslab) {
-      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset = createDataset<Type>(path, fileslab);
+      boost::shared_ptr<HDFDataSet<HDFImpl> > dataset;
+      try {
+	dataset = createDataset<Type>(path, fileslab);
+      } catch (DatasetExists &) {
+	dataset = openDataset(path);
+      }
       dataset->writeData(data, memslab);
       return dataset;
     }
 
-  private:
+  protected:
     boost::shared_ptr<typename HDFImpl::group_type> group;
   };
 }
