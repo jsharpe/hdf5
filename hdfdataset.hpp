@@ -5,6 +5,7 @@
 #include <hdf5/hdf5/traits.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <stdexcept>
 
 namespace hdf {
   template<class HDFImpl=HDF5Traits>
@@ -53,15 +54,14 @@ namespace hdf {
 
     template<int order, typename Type>
     void
-    readData(Type &data, const Slab<order, HDFImpl> & mem)
+    readData(Type *data, const Slab<order, HDFImpl> & mem)
     {
       HDFImpl::read_dataset(*dataset, data, mem);
     }
 
-
     template<typename Type>
     void
-    readData(Type &data)
+    readData(Type *data)
     {
       HDFImpl::read_dataset(*dataset, data);
     }

@@ -1,17 +1,12 @@
 #ifndef hdf5traitsH
 #define hdf5traitsH
 
-#include <hdf5.h>
 #include <boost/noncopyable.hpp>
-#include <vector>
-#include <typeinfo>
-#include <iostream>
-#include <sstream>
-
 #include <boost/fusion/support/is_sequence.hpp>
 #include <boost/fusion/include/is_sequence.hpp>
 #include <boost/mpl/assert.hpp>
 #include <boost/ref.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/type_traits/remove_cv.hpp>
 #include <boost/fusion/algorithm/iteration/for_each.hpp>
 #include <boost/mpl/for_each.hpp>
@@ -21,12 +16,17 @@
 #include <boost/fusion/adapted/mpl.hpp>
 #include <boost/fusion/include/mpl.hpp>
 #include <boost/type_traits/is_same.hpp>
-#include <boost/filesystem/path.hpp>
-
 #include <boost/cstdint.hpp>
-#include <exception>
 
-#include <mpi.h>
+#include <string>
+#include <exception>
+#include <vector>
+#include <typeinfo>
+#include <iostream>
+#include <sstream>
+
+#include <hdf5.h>
+//#include <mpi.h>
 
 namespace hdf {
 
@@ -214,6 +214,24 @@ namespace hdf {
   };
 
   template<>
+  class data_type_traits<long long> {
+  public:
+    typedef boost::true_type is_homogeneous;
+    static hid_t homogeneous_type() { return H5Tcopy(value()); }
+    static hid_t value() { return H5T_NATIVE_LLONG; }
+    static hsize_t dimsize() { return 1; }
+    static void insert_data_type(hid_t t, size_t & offset) {
+      static int i = 0;
+      std::string name("longlong");
+      std::stringstream ss;
+      ss << i++;
+      name += ss.str();
+      H5Tinsert(t, name.c_str(), offset, value());
+      offset += HDF5_datatype_size<long long>();
+    }
+  };
+
+  template<>
   class data_type_traits<unsigned long> {
   public:
     typedef boost::true_type is_homogeneous;
@@ -305,17 +323,17 @@ namespace hdf {
 
   class HDF5FileHolder : boost::noncopyable {
   public:
-    HDF5FileHolder(const boost::filesystem::path & path) {
+    HDF5FileHolder(const std::string & path) {
       hid_t	plist_id;
       plist_id = H5Pcreate(H5P_FILE_ACCESS);
 #ifdef H5_HAVE_PARALLEL
-      H5Pset_fapl_mpiposix(plist_id, MPI_COMM_WORLD, false);
+      //H5Pset_fapl_mpiposix(plist_id, MPI_COMM_WORLD, false);
 #endif
 
-      if(H5Fis_hdf5(path.string().c_str()) > 0) {
-	file = H5Fopen(path.string().c_str(), H5F_ACC_RDWR, plist_id);
+      if(H5Fis_hdf5(path.c_str()) > 0) {
+	file = H5Fopen(path.c_str(), H5F_ACC_RDWR, plist_id);
       } else {
-	file = H5Fcreate(path.string().c_str(),
+	file = H5Fcreate(path.c_str(),
 			 H5F_ACC_TRUNC,
 			 H5P_DEFAULT,
 			 plist_id);
@@ -324,14 +342,14 @@ namespace hdf {
       check_errors();
     }
 
-    HDF5FileHolder(const boost::filesystem::path & path, Create) {
+    HDF5FileHolder(const std::string & path, Create) {
       hid_t	plist_id;
       plist_id = H5Pcreate(H5P_FILE_ACCESS);
 #ifdef H5_HAVE_PARALLEL
-      H5Pset_fapl_mpiposix(plist_id, MPI_COMM_WORLD, false);
+      //H5Pset_fapl_mpiposix(plist_id, MPI_COMM_WORLD, false);
 #endif
 
-      file = H5Fcreate(path.string().c_str(),
+      file = H5Fcreate(path.c_str(),
 		       H5F_ACC_TRUNC,
 		       H5P_DEFAULT,
 		       plist_id);
@@ -440,10 +458,10 @@ namespace hdf {
       std::vector<hsize_t> elements(numCoords);
       std::vector<hsize_t>::iterator j = elements.begin();
       for(std::vector<int>::const_iterator i = mapping.begin(); i != mapping.end(); ++i) {
-	for(int l=0; l < dim2size; ++l) {
+	for(hsize_t l=0; l < dim2size; ++l) {
 	  *j = *i;
 	  ++j;
-	  for(int k=1; k < dataspaceDims; ++k, ++j)
+	  for(hsize_t k=1; k < dataspaceDims; ++k, ++j)
 	    *j = l;
 	}
       }
@@ -621,11 +639,11 @@ namespace hdf {
   class HDF5Group : boost::noncopyable {
   public:
     template<class Parent>
-    HDF5Group(Parent & p, const boost::filesystem::path & path, Create) {
+    HDF5Group(Parent & p, const std::string & path, Create) {
 #if H5_VERS_MINOR >= 8
-      group = H5Gcreate(p.hid(), path.string().c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
+      group = H5Gcreate(p.hid(), path.c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
 #else
-      group = H5Gcreate(p.hid(), path.string().c_str(), 0);
+      group = H5Gcreate(p.hid(), path.c_str(), 0);
 #endif
       if(group < 0)
 	throw;
@@ -633,21 +651,21 @@ namespace hdf {
     }
 
     template<class Parent>
-    HDF5Group(Parent & p, const boost::filesystem::path & path, bool create) {
-      if(H5Lexists(p.hid(), path.string().c_str(), H5P_DEFAULT) || path.string() == "/") {
+    HDF5Group(Parent & p, const std::string & path, bool create) throw(GroupNotFound){
+      if(H5Lexists(p.hid(), path.c_str(), H5P_DEFAULT) || path == "/") {
 
 #if H5_VERS_MINOR >= 8
-	group = H5Gopen(p.hid(), path.string().c_str(), H5P_DEFAULT);
+	group = H5Gopen(p.hid(), path.c_str(), H5P_DEFAULT);
 #else
-	group = H5Gopen(p.hid(), path.string().c_str());
+	group = H5Gopen(p.hid(), path.c_str());
 #endif
       }
       else if(create) {
 	//Group didn't exist and we've asked to create the group
 #if H5_VERS_MINOR >= 8
-	group = H5Gcreate(p.hid(), path.string().c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
+	group = H5Gcreate(p.hid(), path.c_str(), 0, H5P_DEFAULT, H5P_DEFAULT);
 #else
-	group = H5Gcreate(p.hid(), path.string().c_str(), 0);
+	group = H5Gcreate(p.hid(), path.c_str(), 0);
 #endif
 	if(group < 0)
 	  throw; //Error creating group
@@ -720,7 +738,7 @@ namespace hdf {
     typedef detail::HDF5DataSpace slab_type;
 
     static boost::shared_ptr<file_handle_type>
-    open(const boost::filesystem::path & path, bool truncate) {
+    open(const std::string & path, bool truncate) {
       if(truncate) {
 	detail::Create c;
 	return boost::shared_ptr<file_handle_type>(new file_handle_type(path, c));
@@ -729,33 +747,33 @@ namespace hdf {
     }
 
     static boost::shared_ptr<group_type>
-    openGroup(file_handle_type & f, const boost::filesystem::path & path, bool create) {
+    openGroup(file_handle_type & f, const std::string & path, bool create) {
       return boost::shared_ptr<group_type>(new group_type(f,path,create));
     }
 
     static boost::shared_ptr<group_type>
-    openGroup(group_type & f, const boost::filesystem::path & path, bool create) {
+    openGroup(group_type & f, const std::string & path, bool create) {
       return boost::shared_ptr<group_type>(new group_type(f,path,create));
     }
 
     static boost::shared_ptr<group_type>
-    createGroup(file_handle_type & f, const boost::filesystem::path & path) {
+    createGroup(file_handle_type & f, const std::string & path) {
       return boost::shared_ptr<group_type>(new group_type(f,path,detail::Create()));
     }
 
     static boost::shared_ptr<group_type>
-    createGroup(group_type & f, const boost::filesystem::path & path) {
+    createGroup(group_type & f, const std::string & path) {
       return boost::shared_ptr<group_type>(new group_type(f,path,detail::Create()));
     }
 
     static boost::shared_ptr<dataset_type>
-    openDataSet(file_handle_type & f, const boost::filesystem::path & path) {
-      return boost::shared_ptr<dataset_type>(new dataset_type(f, path.string()));
+    openDataSet(file_handle_type & f, const std::string & path) {
+      return boost::shared_ptr<dataset_type>(new dataset_type(f, path));
     }
 
     static boost::shared_ptr<dataset_type>
-    openDataSet(group_type & f, const boost::filesystem::path & path) {
-      return boost::shared_ptr<dataset_type>(new dataset_type(f, path.string()));
+    openDataSet(group_type & f, const std::string & path) {
+      return boost::shared_ptr<dataset_type>(new dataset_type(f, path));
     }
 
     template<class Type>
@@ -782,17 +800,17 @@ namespace hdf {
 
     template<class Type>
     static boost::shared_ptr<dataset_type>
-    createDataSet(file_handle_type & f, const boost::filesystem::path & path, const detail::HDF5DataSpace & space) {
-      detail::HDF5DataType type(detail::wrapper<Type>());
-      return boost::shared_ptr<dataset_type>(new dataset_type(f, path.string(), type, space));
+    createDataSet(file_handle_type & f, const std::string & path, const detail::HDF5DataSpace & space) {
+      detail::HDF5DataType type( (detail::wrapper<Type>()) );
+      return boost::shared_ptr<dataset_type>(new dataset_type(f, path, type, space));
     }
 
     template<typename Type>
     static boost::shared_ptr<dataset_type>
-    createDataSet(group_type & f, const boost::filesystem::path & path, const detail::HDF5DataSpace &space) {
+    createDataSet(group_type & f, const std::string & path, const detail::HDF5DataSpace &space) {
       detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
-      return boost::shared_ptr<dataset_type>(new dataset_type(f, path.string(), datatype, space));
+      return boost::shared_ptr<dataset_type>(new dataset_type(f, path, datatype, space));
     }
 
     template<typename Type>
@@ -858,16 +876,17 @@ namespace hdf {
       H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(), fileSpace->hid(), H5P_DEFAULT, &data[0]);
     }
 
+
     template<typename Type>
     static void
-    read_dataset(const dataset_type & dataset, Type & data, const detail::HDF5DataSpace & memorySpace) {
+    read_dataset(const dataset_type & dataset, Type * data, const detail::HDF5DataSpace & memorySpace) {
       boost::shared_ptr<detail::HDF5DataSpace> fileSpace = dataset.getDataSpace();
       detail::wrapper<Type> t;
       detail::HDF5DataType datatype(t);
 
 //       output_dims(memorySpace.hid());
 //       output_dims(fileSpace->hid());
-      H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(), fileSpace->hid(), H5P_DEFAULT, &data[0]);
+      H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(), fileSpace->hid(), H5P_DEFAULT, data);
     }
 
     template<typename Type>

@@ -2,7 +2,7 @@
 #define hdfslabH
 
 #include <hdf5/hdf5/traits.hpp>
-#include <boost/filesystem/path.hpp>
+#include <vector>
 
 namespace hdf {
 
