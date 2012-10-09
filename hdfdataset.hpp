@@ -31,11 +31,34 @@ namespace hdf {
       HDFImpl::write_dataset(*dataset, data);
     }
 
+    template<typename Type>
+    void
+    writeParallelData(const Type &data)
+    {
+      HDFImpl::write_parallel_dataset(*dataset, data);
+    }
+
     template<int order, typename Type>
     void
     writeData(const Type &data, const Slab<order, HDFImpl> & mem)
     {
       HDFImpl::write_dataset(*dataset, data, mem);
+    }
+
+    template<int order, typename Type>
+    void
+    writeParallelData(const Type &data, const Slab<order, HDFImpl> & mem)
+    {
+      HDFImpl::write_parallel_dataset(*dataset, data, mem);
+    }
+
+    template<int order, typename Type>
+    void
+    writeParallelData(const Type &data,
+        const Slab<order, HDFImpl> & memSpace,
+        const Slab<order, HDFImpl> & fileSpace)
+    {
+      HDFImpl::write_parallel_dataset(*dataset, data, memSpace, fileSpace);
     }
 
     template<int order, typename Type>

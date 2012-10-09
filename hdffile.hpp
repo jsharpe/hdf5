@@ -32,6 +32,33 @@ namespace hdf {
   private:
     boost::shared_ptr<typename HDFImpl::file_handle_type> file;
   };
+
+  template<class HDFImpl=HDF5Traits>
+  class HDFParallelFile : public HDFGroup<HDFImpl> {
+  public:
+    typedef HDFGroup<HDFImpl> HDFGroup_t;
+    enum Flags {
+      none = 0,
+      truncate = 1
+    };
+
+
+    /**
+     * Open the hdf5 file at the given location
+     * Truncates the file if flags == truncate
+     */
+    HDFParallelFile(const std::string & path, Flags flags = none) {
+      file = HDFImpl::parallel_open(path, flags==truncate);
+      HDFGroup_t::initFileGroup(*file);
+    };
+
+    ~HDFParallelFile() {
+      HDFGroup<HDFImpl>::group.reset();
+    }
+
+  private:
+    boost::shared_ptr<typename HDFImpl::parallel_file_handle_type> file;
+  };
 }
 
 #endif
