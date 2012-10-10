@@ -1,5 +1,5 @@
-#ifndef hdf5traitsH
-#define hdf5traitsH
+
+#pragma once
 
 #include <boost/noncopyable.hpp>
 #include <boost/fusion/support/is_sequence.hpp>
@@ -774,9 +774,13 @@ namespace hdf
          printf(" %i %i \n", newSpace->elements[i*dataspaceDims],newSpace->elements[i*dataspaceDims+1]);
          }
          */
-        //printf(" dims %i %i %i %i %i %i\n", numElements,numCoords,dataspaceDims,dims[0],dims[1],orig.getNumDimensions());
         H5Sselect_elements(newSpace->hid(), H5S_SELECT_SET, numElements,
             &newSpace->elements[0]);
+
+        //int t = H5Sget_select_npoints(newSpace->hid());
+
+        //printf(" dims %i %i %i %i %i %i\n", numElements,numCoords,dataspaceDims,dims[0],t,orig.getNumDimensions());
+
         return newSpace;
       }
     public:
@@ -1279,10 +1283,11 @@ namespace hdf
       {
         detail::wrapper<Type> t;
         detail::HDF5DataType memdatatype(t);
-        hid_t fileSpace = H5Dget_space(dataset.hid());
-        H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), fileSpace,
+        boost::shared_ptr<detail::HDF5DataSpace> fileSpace = dataset.getDataSpace();
+
+        H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), fileSpace->hid(),
             H5P_DEFAULT, data);
-        H5Sclose(fileSpace);
+        //H5Sclose(fileSpace);
       }
 
     template<typename Type>
@@ -1296,10 +1301,11 @@ namespace hdf
 
         detail::wrapper<Type> t;
         detail::HDF5DataType memdatatype(t);
-        hid_t fileSpace = H5Dget_space(dataset.hid());
-        H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), fileSpace,
+        boost::shared_ptr<detail::HDF5DataSpace> fileSpace = dataset.getDataSpace();
+
+        H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), fileSpace->hid(),
             plist_id, data);
-        H5Sclose(fileSpace);
+        //H5Sclose(fileSpace);
       }
 
     template<typename Type>
@@ -1337,8 +1343,13 @@ namespace hdf
             dataset.getDataSpace();
         if (data.empty())
         {
+          hsize_t sel = H5Sget_select_npoints(fileSpace->hid());
+
           std::vector<hsize_t> dims = fileSpace->getDimensions();
           std::size_t size = dims[0];
+
+          assert(sel != size);
+
           for (int i = 1; i < dims.size(); ++i)
             size *= dims[i];
 
@@ -1372,6 +1383,45 @@ namespace hdf
 
     template<typename Type>
       static void
+      read_parallel_dataset(const dataset_type & dataset, Type * data,
+          const detail::HDF5DataSpace & memorySpace)
+      {
+        hid_t plist_id;
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
+        boost::shared_ptr<detail::HDF5DataSpace> fileSpace =
+            dataset.getDataSpace();
+        detail::wrapper<Type> t;
+        detail::HDF5DataType datatype(t);
+
+//       output_dims(memorySpace.hid());
+//       output_dims(fileSpace->hid());
+        H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(),
+            fileSpace->hid(), plist_id, data);
+      }
+
+    template<typename Type>
+      static void
+      read_parallel_dataset(const dataset_type & dataset, Type * data,
+          const detail::HDF5DataSpace & memorySpace,
+          const detail::HDF5DataSpace & fileSpace)
+      {
+        hid_t plist_id;
+        plist_id = H5Pcreate(H5P_DATASET_XFER);
+        H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
+        detail::wrapper<Type> t;
+        detail::HDF5DataType datatype(t);
+
+//       output_dims(memorySpace.hid());
+//       output_dims(fileSpace->hid());
+        H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(),
+            fileSpace.hid(), plist_id, data);
+      }
+
+    template<typename Type>
+      static void
       read_dataset(const dataset_type & dataset, Type & data)
       {
         boost::shared_ptr<detail::HDF5DataSpace> fileSpace =
@@ -1399,4 +1449,4 @@ namespace hdf
       }
   };
 }
-#endif
+

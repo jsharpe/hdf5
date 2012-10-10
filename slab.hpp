@@ -22,9 +22,9 @@ namespace hdf {
     }
 
     Slab(const Slab<order, HDFImpl> & orig,
-	 const std::vector<hsize_t> & offset,
-	 const std::vector<hsize_t> & stride,
-	 const std::vector<hsize_t> & count)
+         const std::vector<hsize_t> & offset,
+         const std::vector<hsize_t> & stride,
+         const std::vector<hsize_t> & count)
       : HDFImpl::slab_type(orig, offset, stride, count)
     {}
 

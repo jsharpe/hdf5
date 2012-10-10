@@ -82,6 +82,28 @@ namespace hdf {
       HDFImpl::read_dataset(*dataset, data, mem);
     }
 
+    template<int order, typename Type>
+    void
+    readParallelData(Type *data, const Slab<order, HDFImpl> & mem)
+    {
+      HDFImpl::read_parallel_dataset(*dataset, data, mem);
+    }
+
+    template<int order, typename Type>
+    void
+    readParallelData(const Type &data,
+        const Slab<order, HDFImpl> & memSpace,
+        const Slab<order, HDFImpl> & fileSpace)
+    {
+      HDFImpl::read_parallel_dataset(*dataset, data, memSpace, fileSpace);
+    }
+
+    std::vector<hsize_t>
+    getDimensions() const
+    {
+      return dataset->getDataSpace()->getDimensions();
+    }
+
     template<typename Type>
     void
     readData(Type *data)
