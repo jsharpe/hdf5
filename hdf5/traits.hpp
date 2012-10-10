@@ -1345,17 +1345,14 @@ namespace hdf
         {
           hsize_t sel = H5Sget_select_npoints(fileSpace->hid());
 
+          /*
           std::vector<hsize_t> dims = fileSpace->getDimensions();
           std::size_t size = dims[0];
-
-          assert(sel != size);
-
           for (int i = 1; i < dims.size(); ++i)
             size *= dims[i];
-
-          data.resize(size);
-
-          //printf("SZ %i\n",size);
+          assert(sel != size);
+          */
+          data.resize(sel);
         }
         std::vector<hsize_t> d(1, data.size());
         detail::HDF5DataSpace memorySpace(d);
