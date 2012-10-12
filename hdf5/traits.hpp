@@ -1310,6 +1310,20 @@ namespace hdf
 
     template<typename Type>
       static void
+      write_dataset(const dataset_type & dataset, const Type * data,
+          const detail::HDF5DataSpace &memorySpace,
+          const detail::HDF5DataSpace &fileSpace)
+      {
+        detail::wrapper<Type> t;
+        detail::HDF5DataType memdatatype(t);
+        //hid_t fileSpace = H5Dget_space(dataset.hid());
+        H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), fileSpace.hid(),
+            H5P_DEFAULT, data);
+        //H5Sclose(fileSpace);
+      }
+
+    template<typename Type>
+      static void
       write_parallel_dataset(const dataset_type & dataset, const Type * data,
           const detail::HDF5DataSpace &memorySpace,
           const detail::HDF5DataSpace &fileSpace)

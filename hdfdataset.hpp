@@ -47,6 +47,15 @@ namespace hdf {
 
     template<int order, typename Type>
     void
+    writeData(const Type &data,
+        const Slab<order, HDFImpl> & mem,
+        const Slab<order, HDFImpl> & filespace)
+    {
+      HDFImpl::write_dataset(*dataset, data, mem, filespace);
+    }
+
+    template<int order, typename Type>
+    void
     writeParallelData(const Type &data, const Slab<order, HDFImpl> & mem)
     {
       HDFImpl::write_parallel_dataset(*dataset, data, mem);
