@@ -1394,6 +1394,21 @@ namespace hdf
 
     template<typename Type>
       static void
+      read_dataset(const dataset_type & dataset, Type * data,
+          const detail::HDF5DataSpace & memorySpace,
+          const detail::HDF5DataSpace &fileSpace)
+      {
+        detail::wrapper<Type> t;
+        detail::HDF5DataType datatype(t);
+
+//       output_dims(memorySpace.hid());
+//       output_dims(fileSpace->hid());
+        H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(),
+            fileSpace.hid(), H5P_DEFAULT, data);
+      }
+
+    template<typename Type>
+      static void
       read_parallel_dataset(const dataset_type & dataset, Type * data,
           const detail::HDF5DataSpace & memorySpace)
       {
@@ -1425,8 +1440,8 @@ namespace hdf
         detail::wrapper<Type> t;
         detail::HDF5DataType datatype(t);
 
-//       output_dims(memorySpace.hid());
-//       output_dims(fileSpace->hid());
+        //output_dims(memorySpace.hid());
+        //output_dims(fileSpace.hid());
         H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(),
             fileSpace.hid(), plist_id, data);
       }

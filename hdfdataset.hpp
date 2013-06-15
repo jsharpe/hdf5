@@ -90,6 +90,13 @@ namespace hdf {
     {
       HDFImpl::read_dataset(*dataset, data, mem);
     }
+    template<int order, typename Type>
+    void
+    readData(Type *data, const Slab<order, HDFImpl> & mem,
+        const Slab<order, HDFImpl> & filespace)
+    {
+      HDFImpl::read_dataset(*dataset, data, mem,filespace);
+    }
 
     template<int order, typename Type>
     void
