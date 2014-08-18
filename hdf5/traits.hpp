@@ -586,6 +586,8 @@ namespace hdf
         hid_t plist_id;
         plist_id = H5Pcreate(H5P_FILE_ACCESS);
 
+        //https://wickie.hlrs.de/platforms/index.php/MPI-IO
+
         //H5Pset_fapl_mpiposix(plist_id, MPI_COMM_WORLD, false);
         H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
 
