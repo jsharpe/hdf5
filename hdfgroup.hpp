@@ -64,8 +64,21 @@ namespace hdf {
     boost::shared_ptr<HDFGroup<HDFImpl> >
     createGroup(const std::string & path) {
       return boost::shared_ptr<HDFGroup<HDFImpl> >
-	(new HDFGroup<HDFImpl>
-	 (HDFImpl::createGroup(*group, path)));
+        (new HDFGroup<HDFImpl>
+         (HDFImpl::createGroup(*group, path)));
+    }
+
+    /**
+     * Create a new external link
+     */
+    boost::shared_ptr<HDFGroup<HDFImpl> >
+    createExternalLink(const std::string & externalFile,
+        const std::string & externalPath,
+        const std::string & path) {
+      return boost::shared_ptr<HDFGroup<HDFImpl> >
+        (new HDFGroup<HDFImpl>
+         (HDFImpl::createExternalLink(*group,externalFile,
+               externalPath, path)));
     }
     
     /**

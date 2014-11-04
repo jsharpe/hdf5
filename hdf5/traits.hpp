@@ -608,6 +608,8 @@ namespace hdf
         hid_t plist_id;
         plist_id = H5Pcreate(H5P_FILE_ACCESS);
 
+        //https://wickie.hlrs.de/platforms/index.php/MPI-IO
+
         //H5Pset_fapl_mpiposix(plist_id, MPI_COMM_WORLD, false);
         H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
 
@@ -1033,6 +1035,26 @@ namespace hdf
           }
         }
 
+      /**
+       * Create external link
+       */
+      template<class Parent>
+        HDF5Group(Parent & p,
+            const std::string & externalFile,
+            const std::string & externalPath,
+            const std::string & path, Create)
+        {
+#if H5_VERS_MINOR >= 8
+          group = H5Lcreate_external(externalFile.c_str(),externalPath.c_str(),
+              p.hid(), path.c_str(), H5P_DEFAULT, H5P_DEFAULT);
+#else
+          group = H5Lcreate_external(p.hid(), path.c_str());
+#endif
+          if (group < 0)
+            throw;
+          check_errors();
+        }
+
       ~HDF5Group()
       {
         H5Gclose(group);
@@ -1166,6 +1188,18 @@ namespace hdf
       return boost::shared_ptr<group_type>(
           new group_type(f, path, detail::Create()));
     }
+
+    static boost::shared_ptr<group_type>
+    createExternalLink(group_type & f,
+        const std::string & externalFile,
+        const std::string & externalPath,
+        const std::string & path)
+    {
+      return boost::shared_ptr<group_type>(
+          new group_type(f,externalFile,
+              externalPath, path, detail::Create()));
+    }
+
 
     template<typename FileHandle>
     static boost::shared_ptr<dataset_type>
