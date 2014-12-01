@@ -32,7 +32,7 @@ namespace hdf {
   private:
     boost::shared_ptr<typename HDFImpl::file_handle_type> file;
   };
-
+#ifdef H5_HAVE_PARALLEL
   template<class HDFImpl=HDF5Traits>
   class HDFParallelFile : public HDFGroup<HDFImpl> {
   public:
@@ -59,6 +59,7 @@ namespace hdf {
   private:
     boost::shared_ptr<typename HDFImpl::parallel_file_handle_type> file;
   };
+#endif
 }
 
 #endif

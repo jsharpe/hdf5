@@ -577,7 +577,7 @@ namespace hdf
     private:
       hid_t file;
     };
-
+#ifdef H5_HAVE_PARALLEL
     class HDF5ParallelFileHolder : boost::noncopyable
     {
     public:
@@ -633,7 +633,7 @@ namespace hdf
     private:
       hid_t file;
     };
-
+#endif
     class HDF5DataSpace
     {
     public:
@@ -1296,7 +1296,7 @@ namespace hdf
         H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), H5S_ALL,
             H5P_DEFAULT, &data[0]);
       }
-
+#ifdef H5_HAVE_PARALLEL
     template<typename Type>
     static void
     write_parallel_dataset(const dataset_type & dataset, const std::vector<Type> & data)
@@ -1311,7 +1311,7 @@ namespace hdf
       detail::HDF5DataType memdatatype(t);
       H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), H5S_ALL, plist_id, &data[0]);
     }
-
+#endif
     template<typename Type>
       static void
       write_dataset(const dataset_type & dataset, const Type * data,
@@ -1325,7 +1325,7 @@ namespace hdf
             H5P_DEFAULT, data);
         //H5Sclose(fileSpace);
       }
-
+#ifdef H5_HAVE_PARALLEL
     template<typename Type>
       static void
       write_parallel_dataset(const dataset_type & dataset, const Type * data,
@@ -1343,7 +1343,7 @@ namespace hdf
             plist_id, data);
         //H5Sclose(fileSpace);
       }
-
+#endif
     template<typename Type>
       static void
       write_dataset(const dataset_type & dataset, const Type * data,
@@ -1357,7 +1357,7 @@ namespace hdf
             H5P_DEFAULT, data);
         //H5Sclose(fileSpace);
       }
-
+#ifdef H5_HAVE_PARALLEL
     template<typename Type>
       static void
       write_parallel_dataset(const dataset_type & dataset, const Type * data,
@@ -1375,7 +1375,7 @@ namespace hdf
             plist_id, data);
         //H5Sclose(fileSpace);
       }
-
+#endif
     template<typename Type>
       static void
       read_attribute(const attribute_type & attribute, Type & data)
@@ -1442,7 +1442,7 @@ namespace hdf
         H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(),
             fileSpace.hid(), H5P_DEFAULT, data);
       }
-
+#ifdef H5_HAVE_PARALLEL
     template<typename Type>
       static void
       read_parallel_dataset(const dataset_type & dataset, Type * data,
@@ -1481,7 +1481,7 @@ namespace hdf
         H5Dread(dataset.hid(), datatype.hid(), memorySpace.hid(),
             fileSpace.hid(), plist_id, data);
       }
-
+#endif
     template<typename Type>
       static void
       read_dataset(const dataset_type & dataset, Type & data)

@@ -30,14 +30,14 @@ namespace hdf {
     {
       HDFImpl::write_dataset(*dataset, data);
     }
-
+#ifdef H5_HAVE_PARALLEL
     template<typename Type>
     void
     writeParallelData(const Type &data)
     {
       HDFImpl::write_parallel_dataset(*dataset, data);
     }
-
+#endif
     template<int order, typename Type>
     void
     writeData(const Type &data, const Slab<order, HDFImpl> & mem)
@@ -53,7 +53,7 @@ namespace hdf {
     {
       HDFImpl::write_dataset(*dataset, data, mem, filespace);
     }
-
+#ifdef H5_HAVE_PARALLEL
     template<int order, typename Type>
     void
     writeParallelData(const Type &data, const Slab<order, HDFImpl> & mem)
@@ -69,7 +69,7 @@ namespace hdf {
     {
       HDFImpl::write_parallel_dataset(*dataset, data, memSpace, fileSpace);
     }
-
+#endif
     template<int order, typename Type>
     void
     writeData(const std::vector<Type> &data, const Slab<order, HDFImpl> & mem)
@@ -97,7 +97,7 @@ namespace hdf {
     {
       HDFImpl::read_dataset(*dataset, data, mem,filespace);
     }
-
+#ifdef H5_HAVE_PARALLEL
     template<int order, typename Type>
     void
     readParallelData(Type *data, const Slab<order, HDFImpl> & mem)
@@ -113,7 +113,7 @@ namespace hdf {
     {
       HDFImpl::read_parallel_dataset(*dataset, data, memSpace, fileSpace);
     }
-
+#endif
     std::vector<hsize_t>
     getDimensions() const
     {
