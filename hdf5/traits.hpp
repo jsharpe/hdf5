@@ -1129,7 +1129,9 @@ namespace hdf
   {
   public:
     typedef detail::HDF5FileHolder file_handle_type;
+#ifdef H5_HAVE_PARALLEL
     typedef detail::HDF5ParallelFileHolder parallel_file_handle_type;
+#endif
     typedef detail::HDF5Group group_type;
     typedef detail::HDF5DataType datatype_type;
     typedef detail::HDF5DataSet dataset_type;
@@ -1147,7 +1149,7 @@ namespace hdf
       }
       return boost::shared_ptr<file_handle_type>(new file_handle_type(path));
     }
-
+#ifdef H5_HAVE_PARALLEL
     static boost::shared_ptr<parallel_file_handle_type>
     parallel_open(const std::string & path, bool truncate)
     {
@@ -1159,7 +1161,7 @@ namespace hdf
       }
       return boost::shared_ptr<parallel_file_handle_type>(new parallel_file_handle_type(path));
     }
-
+#endif
     template<typename FileHandle>
     static boost::shared_ptr<group_type>
     openGroup(FileHandle & f, const std::string & path, bool create)
