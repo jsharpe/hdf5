@@ -30,10 +30,11 @@ namespace hdf {
     void initFileGroup(typename HDFImpl::file_handle_type &file, const std::string & path = std::string("/")) {
       group = HDFImpl::openGroup(file, path, false); //pass true to create here for the case where we are mounting a file in a file where the mount point doesn't yet exist - but only if path != "/"
     }
+#ifdef H5_HAVE_PARALLEL
     void initFileGroup(typename HDFImpl::parallel_file_handle_type &file, const std::string & path = std::string("/")) {
       group = HDFImpl::openGroup(file, path, false); //pass true to create here for the case where we are mounting a file in a file where the mount point doesn't yet exist - but only if path != "/"
     }
-
+#endif
   public:
     /**
      * Open a group from an existing file
