@@ -16,8 +16,9 @@ namespace hdf {
       : dataset(dataset)
     {}
 
+    template<typename Type>
     boost::shared_ptr<HDFDataSet<HDFImpl> >
-    selectSubset(const std::vector<int> & mapping)
+    selectSubset(const std::vector<Type> & mapping)
     {
       if(mapping.empty()) throw std::runtime_error("No mapping available");
       dataset = dataset->selectSubset(mapping);

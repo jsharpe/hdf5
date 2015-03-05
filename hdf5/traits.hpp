@@ -738,8 +738,9 @@ namespace hdf
         return dataspace;
       }
 
+      template<typename Type>
       static boost::shared_ptr<HDF5DataSpace>
-      selectSubset(const HDF5DataSpace & orig, const std::vector<int> &mapping)
+      selectSubset(const HDF5DataSpace & orig, const std::vector<Type> &mapping)
       {
         boost::shared_ptr<HDF5DataSpace> newSpace(new HDF5DataSpace(orig));
 
@@ -757,7 +758,7 @@ namespace hdf
 
         newSpace->elements.resize(numCoords);
         std::vector<hsize_t>::iterator j = newSpace->elements.begin();
-        for (std::vector<int>::const_iterator i = mapping.begin();
+        for (typename std::vector<Type>::const_iterator i = mapping.begin();
             i != mapping.end(); ++i)
         {
           for (hsize_t l = 0; l < dim2size; ++l)
@@ -961,8 +962,9 @@ namespace hdf
         return space;
       }
 
+      template<typename Type>
       boost::shared_ptr<HDF5DataSet>
-      selectSubset(const std::vector<int> & mapping)
+      selectSubset(const std::vector<Type> & mapping)
       {
         boost::shared_ptr<HDF5DataSet> newDataset(new HDF5DataSet(dataset));
         newDataset->space = HDF5DataSpace::selectSubset(*space, mapping);
