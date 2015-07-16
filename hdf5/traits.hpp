@@ -1283,7 +1283,7 @@ namespace hdf
         {
           std::vector<hsize_t> dims(2,space.getDimensions()[0]);
           dims[1] = datatype.getDim();
-          Slab<2> filespace(dims);
+          detail::HDF5DataSpace filespace(dims);
           return boost::shared_ptr<dataset_type>(
               new dataset_type(f, path, datatype, filespace));
         }
