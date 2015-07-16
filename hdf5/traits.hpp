@@ -112,6 +112,7 @@ namespace hdf
           boost::mpl::for_each<
               typename boost::fusion::result_of::as_vector<T>::type>(
               boost::ref(*this));
+          assert(HDF5_datatype_size<T>() == offset);
         }
 
         template<class T2>
@@ -189,6 +190,13 @@ namespace hdf
             return 1;
         }
 
+        static hsize_t
+        num_type()
+        {
+          return boost::mpl::count<vec_type,
+                          typename boost::mpl::at_c<vec_type, 0>::type>::type::value;
+        }
+
         static void
         insert_data_type(hid_t t, size_t & offset)
         {
@@ -225,6 +233,11 @@ namespace hdf
         {
           return 1;
         }
+        static hsize_t
+        num_type()
+        {
+          return 1;
+        }
         static void
         insert_data_type(hid_t t, size_t & offset)
         {
@@ -255,6 +268,11 @@ namespace hdf
         }
         static hsize_t
         dimsize()
+        {
+          return 1;
+        }
+        static hsize_t
+        num_type()
         {
           return 1;
         }
@@ -291,6 +309,11 @@ namespace hdf
         {
           return 1;
         }
+        static hsize_t
+        num_type()
+        {
+          return 1;
+        }
         static void
         insert_data_type(hid_t t, size_t & offset)
         {
@@ -321,6 +344,11 @@ namespace hdf
         }
         static hsize_t
         dimsize()
+        {
+          return 1;
+        }
+        static hsize_t
+        num_type()
         {
           return 1;
         }
@@ -357,6 +385,11 @@ namespace hdf
         {
           return 1;
         }
+        static hsize_t
+        num_type()
+        {
+          return 1;
+        }
         static void
         insert_data_type(hid_t t, size_t & offset)
         {
@@ -387,6 +420,11 @@ namespace hdf
         }
         static hsize_t
         dimsize()
+        {
+          return 1;
+        }
+        static hsize_t
+        num_type()
         {
           return 1;
         }
@@ -423,6 +461,11 @@ namespace hdf
         {
           return 1;
         }
+        static hsize_t
+        num_type()
+        {
+          return 1;
+        }
         static void
         insert_data_type(hid_t t, size_t & offset)
         {
@@ -453,6 +496,11 @@ namespace hdf
         }
         static hsize_t
         dimsize()
+        {
+          return 1;
+        }
+        static hsize_t
+        num_type()
         {
           return 1;
         }
@@ -489,6 +537,11 @@ namespace hdf
         {
           return 1;
         }
+        static hsize_t
+        num_type()
+        {
+          return 1;
+        }
         static void
         insert_data_type(hid_t t, size_t & offset)
         {
@@ -522,6 +575,11 @@ namespace hdf
         {
           return 1;
         }
+        static hsize_t
+        num_type()
+        {
+          return 1;
+        }
         static void
         insert_data_type(hid_t t, size_t & offset)
         {
@@ -534,6 +592,7 @@ namespace hdf
           offset += HDF5_datatype_size<double>();
         }
       };
+
 
     class HDF5FileHolder : boost::noncopyable
     {
@@ -580,6 +639,8 @@ namespace hdf
     private:
       hid_t file;
     };
+
+
 #ifdef H5_HAVE_PARALLEL
     class HDF5ParallelFileHolder : boost::noncopyable
     {
@@ -637,6 +698,8 @@ namespace hdf
       hid_t file;
     };
 #endif
+
+
     class HDF5DataSpace
     {
     public:
@@ -1313,6 +1376,10 @@ namespace hdf
         H5Awrite(attribute.hid(), memdatatype.hid(), &data);
       }
 
+/*    struct T{
+      int a; float b;
+    };
+*/
     template<typename Type>
       static void
       write_dataset(const dataset_type & dataset,
@@ -1322,8 +1389,25 @@ namespace hdf
         detail::HDF5DataSpace memorySpace(d);
         detail::wrapper<Type> t;
         detail::HDF5DataType memdatatype(t);
-        H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), H5S_ALL,
-            H5P_DEFAULT, &data[0]);
+/*
+        if(d.size()==1){
+          T tt[2];
+          tt[0].a = 1; tt[0].b = 2;
+          tt[1].a = 3; tt[1].b = 4;
+
+
+
+          herr_t status = H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), H5S_ALL,
+              H5P_DEFAULT, &data[0]);
+          assert(status == 0);
+        }
+        else
+*/
+        {
+          herr_t status = H5Dwrite(dataset.hid(), memdatatype.hid(), memorySpace.hid(), H5S_ALL,
+              H5P_DEFAULT, &data[0]);
+          assert(status == 0);
+        }
       }
 #ifdef H5_HAVE_PARALLEL
     template<typename Type>
@@ -1534,9 +1618,19 @@ namespace hdf
       static std::vector<hsize_t>
       getDims(const std::vector<Type> & t)
       {
-        std::vector<hsize_t> dims(2, detail::data_type_traits<Type>::dimsize());
-        dims[0] = t.size();
-        return dims;
+        //if( detail::data_type_traits<Type>::is_homogeneous::value)
+        {
+          std::vector<hsize_t> dims(2, detail::data_type_traits<Type>::dimsize());
+          dims[0] = t.size();
+          return dims;
+        }/*
+        else
+        {
+          std::vector<hsize_t> dims(1);//2, detail::data_type_traits<Type>::num_type());
+          dims[0] = t.size();
+          return dims;
+        }*/
+
       }
   };
 }
