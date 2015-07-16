@@ -144,6 +144,8 @@ namespace hdf
           TypeCreatorHelper<T,
               typename data_type_traits<typename boost::remove_cv<T>::type>::is_homogeneous> t(
               type);
+
+          dim = data_type_traits<typename boost::remove_cv<T>::type>::dimsize();
         }
 
       template<class T>
@@ -152,8 +154,9 @@ namespace hdf
           TypeCreatorHelper<T,
               typename data_type_traits<typename boost::remove_cv<T>::type>::is_homogeneous> t(
               type);
+          dim = data_type_traits<typename boost::remove_cv<T>::type>::dimsize();
         }
-
+      hsize_t dim;
       hid_t type;
     };
 
@@ -884,6 +887,12 @@ namespace hdf
         check_errors();
       }
 
+      hsize_t
+      getDim() const
+      {
+        return dim;
+      }
+
       hid_t
       hid() const
       {
@@ -896,9 +905,11 @@ namespace hdf
         {
           DataTypeCreator type(t);
           datatype = type.type;
+          dim = type.dim;
           check_errors();
         }
     private:
+      hsize_t dim;
       hid_t datatype;
     };
 
@@ -1265,8 +1276,22 @@ namespace hdf
       {
         detail::wrapper<Type> t;
         detail::HDF5DataType datatype(t);
-        return boost::shared_ptr<dataset_type>(
-            new dataset_type(f, path, datatype, space));
+        // Note DataSpace assumes that datatype is of dim 1
+        // This is incorrect for homogeneous complex types
+        // We should create new dataspace to account for dimension
+        if(datatype.getDim() > 1)
+        {
+          std::vector<hsize_t> dims(2,space.getDimensions()[0]);
+          dims[1] = datatype.getDim();
+          Slab<2> filespace(dims);
+          return boost::shared_ptr<dataset_type>(
+              new dataset_type(f, path, datatype, filespace));
+        }
+        else
+        {
+          return boost::shared_ptr<dataset_type>(
+              new dataset_type(f, path, datatype, space));
+        }
       }
 
     template<typename Type>
