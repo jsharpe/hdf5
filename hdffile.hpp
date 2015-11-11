@@ -6,13 +6,13 @@
 #include <string>
 
 namespace hdf {
-  template<class HDFImpl=HDF5Traits>
-  class HDFFile : public HDFGroup<HDFImpl> {
+template<class HDFImpl=HDF5Traits>
+class HDFFile : public HDFGroup<HDFImpl> {
   public:
     typedef HDFGroup<HDFImpl> HDFGroup_t;
     enum Flags {
-      none = 0,
-      truncate = 1
+        none = 0,
+        truncate = 1
     };
 
 
@@ -21,25 +21,26 @@ namespace hdf {
      * Truncates the file if flags == truncate
      */
     HDFFile(const std::string & path, Flags flags = none) {
-      file = HDFImpl::open(path, flags==truncate);
-      HDFGroup_t::initFileGroup(*file);
+        file = HDFImpl::open(path, flags==truncate);
+        HDFGroup_t::initFileGroup(*file);
     };
 
     ~HDFFile() {
-      HDFGroup<HDFImpl>::group.reset();
+        HDFGroup<HDFImpl>::group.reset();
     }
 
   private:
-    boost::shared_ptr<typename HDFImpl::file_handle_type> file;
-  };
+    std::shared_ptr<typename HDFImpl::file_handle_type> file;
+};
+
 #ifdef H5_HAVE_PARALLEL
-  template<class HDFImpl=HDF5Traits>
-  class HDFParallelFile : public HDFGroup<HDFImpl> {
+template<class HDFImpl=HDF5Traits>
+class HDFParallelFile : public HDFGroup<HDFImpl> {
   public:
     typedef HDFGroup<HDFImpl> HDFGroup_t;
     enum Flags {
-      none = 0,
-      truncate = 1
+        none = 0,
+        truncate = 1
     };
 
 
@@ -48,17 +49,17 @@ namespace hdf {
      * Truncates the file if flags == truncate
      */
     HDFParallelFile(const std::string & path, Flags flags = none) {
-      file = HDFImpl::parallel_open(path, flags==truncate);
-      HDFGroup_t::initFileGroup(*file);
+        file = HDFImpl::parallel_open(path, flags==truncate);
+        HDFGroup_t::initFileGroup(*file);
     };
 
     ~HDFParallelFile() {
-      HDFGroup<HDFImpl>::group.reset();
+        HDFGroup<HDFImpl>::group.reset();
     }
 
   private:
-    boost::shared_ptr<typename HDFImpl::parallel_file_handle_type> file;
-  };
+    std::shared_ptr<typename HDFImpl::parallel_file_handle_type> file;
+};
 #endif
 }
 

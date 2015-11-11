@@ -19,6 +19,6 @@ int main()
 {
 	hdf::HDFFile<> file("test.h5", hdf::HDFFile<>::truncate);
 	std::vector<double> data(100,1.0);
-	boost::shared_ptr<hdf::HDFDataSet<> > dataset
+	std::shared_ptr<hdf::HDFDataSet<> > dataset
 	  = file.writeDataset<double>("doubledataset", data);
 }
