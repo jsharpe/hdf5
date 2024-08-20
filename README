@@ -1,5 +1,5 @@
-This library aims to provide an abstraction of the hdf5 file format for c++ 
-code. It aims to reduce the number of explicit calls to the hdf5 APIs by 
+This library aims to provide an abstraction of the hdf5 file format for c++
+code. It aims to reduce the number of explicit calls to the hdf5 APIs by
 using the c++ type system to automatically construct the appropriate datatypes.
 
 The library is a header only library so no compilation is required.
@@ -11,8 +11,8 @@ Boost 1.37 or greater
 
 Example usage:
 
-#include <hdf5/hdffile.hpp>
-#include <hdf5/hdfdataset.hpp>
+#include <hdffile.hpp>
+#include <hdfdataset.hpp>
 #include <boost/shared_ptr.hpp>
 
 int main()
